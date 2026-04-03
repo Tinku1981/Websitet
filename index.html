@@ -1,0 +1,94 @@
+<!DOCTYPE html><html>
+<head>
+  <title>Advanced Ecommerce Store</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- Firebase -->  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>  <style>
+    body { font-family: Arial; margin:0; background:#f1f3f6; }
+    header { background:#2874f0; color:white; padding:10px; display:flex; justify-content:space-between; }
+    .container { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px; }
+    .product { background:white; padding:10px; border-radius:10px; }
+    img { width:100%; height:120px; object-fit:cover; border-radius:8px; }
+    button { width:100%; padding:7px; margin-top:5px; border:none; border-radius:5px; }
+    .buy { background:#fb641b; color:white; }
+    .cart { background:#ff9f00; color:white; }
+    #cart { position:fixed; bottom:0; width:100%; background:white; padding:10px; }
+  </style></head>
+<body><header>
+  <span>🛒 Advanced Store</span>
+  <button onclick="adminLogin()">Admin</button>
+</header><div class="container" id="products"></div><div id="cart">
+  <span id="total">Total: ₹0</span>
+  <button onclick="checkout()">Checkout</button>
+</div><script>
+// 🔥 Firebase config (replace with your own)
+const firebaseConfig = {
+  apiKey: "YOUR_KEY",
+  databaseURL: "YOUR_DB_URL"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+let products = [];
+let total = 0;
+let orderText = "";
+
+// Load products globally
+function loadProducts(){
+ db.ref("products").on("value", snap=>{
+  products = Object.values(snap.val() || {});
+  renderProducts();
+ });
+}
+
+function renderProducts(){
+ let c=document.getElementById("products");
+ c.innerHTML="";
+ products.forEach((p,i)=>{
+  c.innerHTML+=`
+  <div class="product">
+    <img src="${p.image}">
+    <h4>${p.name}</h4>
+    <p>₹${p.price}</p>
+    <button class="cart" onclick="addToCart('${p.name}',${p.price})">Cart</button>
+    <button class="buy" onclick="buyNow('${p.name}',${p.price})">Buy</button>
+  </div>`;
+ });
+}
+
+function addToCart(n,p){
+ total+=p;
+ document.getElementById("total").innerText="Total: ₹"+total;
+ orderText+=n+" - ₹"+p+"\n";
+}
+
+// Razorpay link
+function buyNow(n,p){
+ window.open("https://rzp.io/l/YOUR_LINK");
+}
+
+function checkout(){
+ let name=prompt("Name");
+ let address=prompt("Address");
+ let final=total+50;
+
+ db.ref("orders").push({
+  name, address, items:orderText, total:final
+ });
+
+ alert("Order placed!");
+}
+
+// Admin add product
+function adminLogin(){
+ let pass=prompt("Password");
+ if(pass!=="1234") return alert("Wrong");
+
+ let name=prompt("Name");
+ let price=prompt("Price");
+ let image=prompt("Image URL");
+
+ db.ref("products").push({name,price:Number(price),image});
+}
+
+loadProducts();
+</script></body>
+</html>
