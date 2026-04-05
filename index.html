@@ -1,94 +1,114 @@
 <!DOCTYPE html><html>
 <head>
-  <title>Advanced Ecommerce Store</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">  <!-- Firebase -->  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>  <style>
-    body { font-family: Arial; margin:0; background:#f1f3f6; }
-    header { background:#2874f0; color:white; padding:10px; display:flex; justify-content:space-between; }
-    .container { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; padding:10px; }
-    .product { background:white; padding:10px; border-radius:10px; }
-    img { width:100%; height:120px; object-fit:cover; border-radius:8px; }
-    button { width:100%; padding:7px; margin-top:5px; border:none; border-radius:5px; }
-    .buy { background:#fb641b; color:white; }
-    .cart { background:#ff9f00; color:white; }
-    #cart { position:fixed; bottom:0; width:100%; background:white; padding:10px; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title> </title>  <style>
+    body{margin:0;font-family:Arial;background:#f1f3f6}
+
+    /* HEADER */
+    header{
+      background:#2874f0;color:white;padding:10px;
+      display:flex;align-items:center;gap:10px
+    }
+    .logo{font-weight:bold}
+    .search{flex:1}
+    .search input{width:100%;padding:6px;border:none;border-radius:3px}
+    .btn{background:white;color:#2874f0;padding:5px 10px;border-radius:3px;border:none}
+
+    /* BANNER */
+    .banner img{width:100%;height:150px;object-fit:cover}
+
+    /* PRODUCTS */
+    .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:8px}
+    .card{background:white;padding:8px;border-radius:6px}
+    .card img{width:100%;height:120px;object-fit:cover}
+    .title{font-size:13px}
+    .price{color:green;font-weight:bold}
+    .rating{color:orange;font-size:12px}
+
+    /* MODAL */
+    #modal{display:none;position:fixed;top:0;width:100%;height:100%;background:#000000aa}
+    .box{background:white;margin:40px auto;padding:10px;width:90%;border-radius:6px}
+
+    /* FOOTER */
+    #cart{position:fixed;bottom:0;width:100%;background:white;padding:10px}
   </style></head>
 <body><header>
-  <span>🛒 Advanced Store</span>
-  <button onclick="adminLogin()">Admin</button>
-</header><div class="container" id="products"></div><div id="cart">
-  <span id="total">Total: ₹0</span>
-  <button onclick="checkout()">Checkout</button>
-</div><script>
-// 🔥 Firebase config (replace with your own)
-const firebaseConfig = {
-  apiKey: "YOUR_KEY",
-  databaseURL: "YOUR_DB_URL"
-};
-firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+  <div class="logo">e- commerce</div>
+  <div class="search"><input placeholder="Search..." onkeyup="search(this.value)"></div>
+  <button class="btn" onclick="login()" id="user">Login</button>
+  <button class="btn" onclick="sell()">Sell</button>
+</header><div class="banner">
+  <img src="https://via.placeholder.com/800x300">
+</div><div class="grid" id="products"></div><div id="cart">Total: ₹<span id="total">0</span></div><div id="modal"><div class="box" id="modalData"></div></div><script>
+let user = localStorage.getItem("user");
+if(user) document.getElementById("user").innerText=user;
 
-let products = [];
-let total = 0;
-let orderText = "";
-
-// Load products globally
-function loadProducts(){
- db.ref("products").on("value", snap=>{
-  products = Object.values(snap.val() || {});
-  renderProducts();
- });
+function login(){
+ let name=prompt("Enter name");
+ if(!name) return;
+ localStorage.setItem("user",name);
+ document.getElementById("user").innerText=name;
 }
 
-function renderProducts(){
+function sell(){
+ let u=localStorage.getItem("user");
+ if(!u) return alert("Login first");
+ let name=prompt("Product name");
+ let price=prompt("Price");
+ let image=prompt("Image link");
+ let desc=prompt("Description");
+
+ products.push({name,price:Number(price),image,desc,rating:"⭐⭐⭐⭐",seller:u});
+ localStorage.setItem("products",JSON.stringify(products));
+ render();
+}
+
+let products = JSON.parse(localStorage.getItem("products")) || [
+ {name:"LED Light",price:499,image:"https://via.placeholder.com/300",desc:"Room light",rating:"⭐⭐⭐⭐",seller:"Admin"},
+ {name:"Headphones",price:799,image:"https://via.placeholder.com/300",desc:"Sound",rating:"⭐⭐⭐⭐⭐",seller:"Admin"}
+];
+
+let total=0;
+
+function render(list=products){
  let c=document.getElementById("products");
  c.innerHTML="";
- products.forEach((p,i)=>{
-  c.innerHTML+=`
-  <div class="product">
+ list.forEach((p,i)=>{
+  c.innerHTML+=`<div class="card" onclick="openP(${i})">
     <img src="${p.image}">
-    <h4>${p.name}</h4>
-    <p>₹${p.price}</p>
-    <button class="cart" onclick="addToCart('${p.name}',${p.price})">Cart</button>
-    <button class="buy" onclick="buyNow('${p.name}',${p.price})">Buy</button>
+    <div class="title">${p.name}</div>
+    <div class="rating">${p.rating}</div>
+    <div class="price">₹${p.price}</div>
   </div>`;
  });
 }
 
-function addToCart(n,p){
+function openP(i){
+ let p=products[i];
+ document.getElementById("modal").style.display="block";
+ document.getElementById("modalData").innerHTML=`
+  <img src="${p.image}" style="width:100%">
+  <h3>${p.name}</h3>
+  <p>${p.desc}</p>
+  <p>Seller: ${p.seller}</p>
+  <p>₹${p.price}</p>
+  <button onclick="addCart(${p.price})">Add to Cart</button>
+  <button onclick="closeM()">Close</button>`;
+}
+
+function closeM(){document.getElementById("modal").style.display="none"}
+
+function addCart(p){
  total+=p;
- document.getElementById("total").innerText="Total: ₹"+total;
- orderText+=n+" - ₹"+p+"\n";
+ document.getElementById("total").innerText=total;
 }
 
-// Razorpay link
-function buyNow(n,p){
- window.open("https://rzp.io/l/YOUR_LINK");
+function search(v){
+ let f=products.filter(p=>p.name.toLowerCase().includes(v.toLowerCase()));
+ render(f);
 }
 
-function checkout(){
- let name=prompt("Name");
- let address=prompt("Address");
- let final=total+50;
-
- db.ref("orders").push({
-  name, address, items:orderText, total:final
- });
-
- alert("Order placed!");
-}
-
-// Admin add product
-function adminLogin(){
- let pass=prompt("Password");
- if(pass!=="1234") return alert("Wrong");
-
- let name=prompt("Name");
- let price=prompt("Price");
- let image=prompt("Image URL");
-
- db.ref("products").push({name,price:Number(price),image});
-}
-
-loadProducts();
+render();
 </script></body>
 </html>
